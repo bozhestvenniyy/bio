@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://cdn.discordapp.com/attachments/1359232526475985199/1375620429141774386/d1ec2139bf98443b098de3c213fff8b0.png?ex=6834541c&is=6833029c&hm=27bafc14d8d25c1d74bd6cf833bc9a0c3b416d7f52e70d00f32ee0f3cc278fdf&" type="image/x-icon">
+    <title>bozhestvenniyy - Цифровая разведка и OSINT</title>
+    <style>
+        :root {
+            --primary: #dc2626;
+            --primary-dark: #7f1d1d;
+            --dark: #0a0a0a;
+            --darker: #000000;
+            --light: #f5f5f5;
+            --gray: #404040;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--darker);
+            color: var(--light);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+		#overlay {
+		  position: absolute;
+		  top: 0; left: 0;
+		  width: 100%; height: 100%;
+		  backdrop-filter: blur(10px);
+		  background-color: rgba(0, 0, 0, 0.6);
+		  display: flex;
+		  justify-content: center;
+		  align-items: center;
+		  z-index: 10;
+		  cursor: pointer;
+		  transition: opacity 0.8s ease;
+		}
+
+		#overlayText {
+		  color: white;
+		  font-size: 32px;
+		  font-family: sans-serif;
+		  background: rgba(255, 255, 255, 0.1);
+		  padding: 20px 40px;
+		  border-radius: 10px;
+		  border: 2px solid white;
+		  backdrop-filter: blur(5px);
+		}
+
+		#overlay.hidden {
+		  opacity: 0;
+		  pointer-events: none;
+		}
+		
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+			opacity: 1;
+        }
+        
+        .background::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://cdn.discordapp.com/attachments/1359232526475985199/1375634096893722805/0457b5089a1addb36f3b540566909cf2.png?ex=683460d6&is=68330f56&hm=75058c5bb48e99be9d5ba09eea4c74f0f0074778bb8ff58d17f360eef315554f&') center/cover no-repeat;
+            opacity: 1;
+        }
+        
+        .background::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(10, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.6) 100%); /* Уменьшил opacity с 0.9/0.95 до 0.5/0.6 */
+            opacity: 1;
+        }
+        
+        .grid-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(220, 38, 38, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(220, 38, 38, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.2;
+        }
+        
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.3;
+            animation: scanline 8s linear infinite;
+        }
+        
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        section {
+            margin-bottom: 4rem;
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title::after {
+            content: "";
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+        }
+
+        .about-card {
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .about-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.2);
+        }
+        
+        .about-content {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        
+        .about-meta {
+            font-size: 0.9rem;
+            color: #a3a3a3;
+        }
+        
+        .services-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .services-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .services-list li::before {
+            content: "❯";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+        
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .card {
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.2);
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            color: var(--primary);
+        }
+        
+        .card-icon {
+            margin-right: 0.8rem;
+            color: var(--primary);
+        }
+        
+        .card-content {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #d4d4d4;
+        }
+        
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+        
+        .skill-tag {
+            background: rgba(220, 38, 38, 0.2);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            color: var(--primary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .skill-tag:hover {
+            background: rgba(220, 38, 38, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .project-card {
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .project-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.2);
+        }
+        
+        .project-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(220, 38, 38, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .project-icon svg {
+            width: 24px;
+            height: 24px;
+            color: var(--primary);
+        }
+        
+        .project-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        
+        .project-description {
+            font-size: 0.9rem;
+            color: #a3a3a3;
+            margin-bottom: 1rem;
+            flex-grow: 1;
+        }
+        
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            color: white;
+            background: rgba(220, 38, 38, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .project-link:hover {
+            background: rgba(220, 38, 38, 0.3);
+            transform: translateX(5px);
+        }
+        
+        .project-link svg {
+            margin-left: 0.5rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .project-link:hover svg {
+            transform: translateX(3px);
+        }
+        
+        .hero {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+            text-align: center;
+            padding: 2rem 0;
+        }
+        
+        .hero-content {
+            max-width: 800px;
+        }
+        
+        .hero-avatar {
+            margin-bottom: 2rem;
+        }
+        
+        .avatar-wrapper {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid var(--primary);
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.5);
+            position: relative;
+        }
+        
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+        }
+        
+        .hero-description {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #d4d4d4;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .hero-cta {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(220, 38, 38, 0.2);
+            color: white;
+            padding: 0.8rem 1.8rem;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 1px solid var(--primary);
+        }
+        
+        .hero-cta:hover {
+            background: rgba(220, 38, 38, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.2);
+        }
+        
+        .hero-cta svg {
+            margin-right: 0.5rem;
+        }
+        
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .delay-100 { transition-delay: 0.1s; }
+        .delay-200 { transition-delay: 0.2s; }
+        .delay-300 { transition-delay: 0.3s; }
+        .delay-400 { transition-delay: 0.4s; }
+        .delay-500 { transition-delay: 0.5s; }
+        .delay-600 { transition-delay: 0.6s; }
+        .delay-700 { transition-delay: 0.7s; }
+        
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+        
+        .glitch:hover {
+            animation: glitch 0.3s cubic-bezier(.25,.46,.45,.94) both infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.2rem;
+            }
+            
+            .hero-description {
+                font-size: 1rem;
+            }
+            
+            .section-title {
+                font-size: 1.5rem;
+            }
+            
+            .about-card, .card, .project-card {
+                padding: 1.5rem;
+            }
+            
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .text-red {
+            color: #dc2626;
+            text-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+        }
+
+        .text-white {
+            color: #ffffff;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+	<div id="overlay">
+		<div id="overlayText">Нажми на меня</div>
+	 </div>
+    <div class="background">
+        <div class="grid-pattern"></div>
+    </div>
+    <div class="scanlines"></div>
+    
+    <div class="container">
+        
+        <section class="hero">
+            <div class="hero-content">
+                <div class="hero-avatar">
+                    <div class="avatar-wrapper">
+                        <img src="https://cdn.discordapp.com/attachments/1359232526475985199/1375620429141774386/d1ec2139bf98443b098de3c213fff8b0.png?ex=6834541c&is=6833029c&hm=27bafc14d8d25c1d74bd6cf833bc9a0c3b416d7f52e70d00f32ee0f3cc278fdf&" alt="Avatar" class="avatar-img">
+                    </div>
+                </div>
+                <h1 class="hero-title fade-in delay-100 glitch"><span class="text-red">bozhest</span><span class="text-white">venniyy</span><span></span></h1>
+                <p class="hero-description fade-in delay-200">
+                    Цифровая разведка и анализ информации из открытых источников
+                </p>
+                <a href="https://t.me/targetToFame" class="hero-cta fade-in delay-300" target="_blank" rel="noopener noreferrer">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    </svg>
+                    Связаться
+                </a>
+            </div>
+        </section>
+        
+        <section class="section fade-in delay-400">
+            <h2 class="section-title">OSINT И ЦИФРОВАЯ РАЗВЕДКА</h2>
+            
+            <div class="about-card">
+                <p class="about-content">
+                    Я занимаюсь поиском, анализом и обработкой информации в открытых источниках. 
+                    Моя специализация включает выявление цифровых угроз, анализ цифровых следов и проведение 
+                    расследований с использованием методологий OSINT, SOCINT и GEOINT.
+                </p>
+                <p class="about-meta">
+                    Род деятельности: <strong>OSINT, Социальная инженерия, Кибербезопасность, анализ данных и решение конфликтов</strong>
+                </p>
+            </div>
+        </section>
+        
+        <section class="section fade-in delay-500">
+            <h2 class="section-title">ЧЕМ Я ЗАНИМАЮСЬ</h2>
+            
+            <div class="about-card services-list">
+                <ul>
+                    <li>Поиск и выявление угроз в сети.</li>
+                    <li>Анализ цифровых следов и информации о людях.</li>
+                    <li>Расследования, связанные с выявлением противоправных действий (педофилия, груминг, мошенничество и т. д.).</li>
+                    <li>Геолокационный анализ данных, поиск местоположения по фото и видеоматериалам.</li>
+                    <li>Разоблачение самозванцев, фейковых личностей и цифровых аферистов.</li>
+                    <li>Консультации по защите личных данных и анонимности в сети.</li>
+                </ul>
+            </div>
+            
+            <div class="card-grid">
+                <div class="card">
+                    <h3 class="card-title">
+                        <div class="card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        </div>
+                        Поиск и выявление угроз
+                    </h3>
+                    <p class="card-content">
+                        Поиск и выявление угроз в сети. Анализ цифровых следов и информации о людях.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">
+                        <div class="card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                        </div>
+                        Расследования
+                    </h3>
+                    <p class="card-content">
+                        Расследования, связанные с выявлением противоправных действий (педофилия, груминг, мошенничество и т. д.).
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">
+                        <div class="card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                        </div>
+                        Геолокационный анализ
+                    </h3>
+                    <p class="card-content">
+                        Геолокационный анализ данных, поиск местоположения по фото и видеоматериалам.
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">
+                        <div class="card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                        </div>
+                        Защита личных данных
+                    </h3>
+                    <p class="card-content">
+                        Разоблачение самозванцев, фейковых личностей и цифровых аферистов. Консультации по защите личных данных и анонимности в сети.
+                    </p>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section fade-in delay-600">
+            <h2 class="section-title">НАВЫКИ</h2>
+            
+            <div class="skills-container">
+                <div class="skill-tag">OSINT</div>
+                <div class="skill-tag">Социальная инженерия</div>
+                <div class="skill-tag">Кибербезопасность</div>
+                <div class="skill-tag">Анализ данных</div>
+                <div class="skill-tag">Решение конфликтов</div>
+            </div>
+        </section>
+        
+        <section class="section fade-in delay-700">
+            <h2 class="section-title">МОИ ПРОЕКТЫ</h2>
+            
+            <div class="projects-grid">
+                <div class="project-card">
+                    <div class="project-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 71 55">
+                        <defs>
+                            <linearGradient id="darkRedGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#8B0000"/>
+                            <stop offset="100%" stop-color="#B22222"/>
+                            </linearGradient>
+                        </defs>
+                        <path fill="url(#darkRedGradient)" d="M60.104 4.552A58.7 58.7 0 0 0 46.88.378a41.415 41.415 0 0 0-1.974 4.062 55.366 55.366 0 0 0-16.872 0A41.33 41.33 0 0 0 26.06.378a58.64 58.64 0 0 0-13.224 4.174c-8.392 12.574-10.668 24.803-9.517 36.95a59.95 59.95 0 0 0 17.844 9.04 43.24 43.24 0 0 0 3.76-6.1 36.924 36.924 0 0 1-5.94-2.894c.5-.367.989-.75 1.46-1.145a43.105 43.105 0 0 0 36.574 0c.471.395.96.778 1.46 1.145a36.92 36.92 0 0 1-5.939 2.893 43.23 43.23 0 0 0 3.758 6.1 59.95 59.95 0 0 0 17.844-9.04c1.364-14.49-2.257-26.646-9.518-36.95ZM23.26 37.644c-3.27 0-5.948-3.004-5.948-6.702 0-3.699 2.648-6.702 5.947-6.702 3.316 0 5.993 3.022 5.948 6.702 0 3.698-2.648 6.702-5.948 6.702Zm24.48 0c-3.27 0-5.947-3.004-5.947-6.702 0-3.699 2.648-6.702 5.947-6.702 3.317 0 5.994 3.022 5.947 6.702 0 3.698-2.648 6.702-5.947 6.702Z"/>
+                        </svg>
+
+                    </div>
+                    <h3 class="project-title">SELFKILL</h3>
+                    <p class="project-description">Клан в дискорде</p>
+                    <a href="https://discord.gg/selfkill" class="project-link" target="_blank" rel="noopener noreferrer">
+                        Перейти
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+                
+                <div class="project-card">
+                    <div class="project-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 71 55">
+                        <defs>
+                            <linearGradient id="darkRedGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#8B0000"/>
+                            <stop offset="100%" stop-color="#B22222"/>
+                            </linearGradient>
+                        </defs>
+                        <path fill="url(#darkRedGradient)" d="M60.104 4.552A58.7 58.7 0 0 0 46.88.378a41.415 41.415 0 0 0-1.974 4.062 55.366 55.366 0 0 0-16.872 0A41.33 41.33 0 0 0 26.06.378a58.64 58.64 0 0 0-13.224 4.174c-8.392 12.574-10.668 24.803-9.517 36.95a59.95 59.95 0 0 0 17.844 9.04 43.24 43.24 0 0 0 3.76-6.1 36.924 36.924 0 0 1-5.94-2.894c.5-.367.989-.75 1.46-1.145a43.105 43.105 0 0 0 36.574 0c.471.395.96.778 1.46 1.145a36.92 36.92 0 0 1-5.939 2.893 43.23 43.23 0 0 0 3.758 6.1 59.95 59.95 0 0 0 17.844-9.04c1.364-14.49-2.257-26.646-9.518-36.95ZM23.26 37.644c-3.27 0-5.948-3.004-5.948-6.702 0-3.699 2.648-6.702 5.947-6.702 3.316 0 5.993 3.022 5.948 6.702 0 3.698-2.648 6.702-5.948 6.702Zm24.48 0c-3.27 0-5.947-3.004-5.947-6.702 0-3.699 2.648-6.702 5.947-6.702 3.317 0 5.994 3.022 5.947 6.702 0 3.698-2.648 6.702-5.947 6.702Z"/>
+                        </svg>
+                    </div>
+                    <h3 class="project-title">Lampire</h3>
+                    <p class="project-description">Дискорд сервер для общения, и лампового провождения времени</p>
+                    <a href="https://discord.gg/bVBSeVRnQK" class="project-link" target="_blank" rel="noopener noreferrer">
+                        Перейти
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                </div>
+                
+                
+            </div>
+        </section>
+    </div>
+	<audio id="music" loop>
+	  <source src="https://d6.hotplayer.ru/downloadm/21244d8115ff59633eefcc3236c5d506/474499258_456889493/4e9099bd35d-126800a5e8f1e-981a66af808/WHITEKIDD%20feat.%20Sancray%2C%20SELF%20%E2%80%94%20%D0%9B%D0%AE%D0%91%D0%98%D0%A2%D0%95%D0%9B%D0%AC.mp3?d=106&v=efe1f0a178" type="audio/mpeg">
+	  Ваш браузер не поддерживает аудио.
+	</audio>
+
+	<script>
+	  const overlay = document.getElementById('overlay');
+	  const audio = document.getElementById('music');
+	  audio.volume = 0.3;
+	  audio.loop = true;
+	  overlay.addEventListener('click', () => {
+		overlay.classList.add('hidden');
+		audio.play().catch(console.warn);
+	  });
+	</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fadeElements = document.querySelectorAll('.fade-in');
+            fadeElements.forEach(element => {
+                element.classList.add('visible');
+            });
+        });
+    </script>
+</body>
+</html>
